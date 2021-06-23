@@ -35,10 +35,11 @@ python main.py
 ![](control.png)
 
 ## Dependencies
-> Only the [Arcade Library](https://github.com/pythonarcade/arcad "Arcade is built on top of Pyglet and OpenGL") and its internal dependencies are used.
+> Only the [Arcade Library](https://github.com/pythonarcade/arcade "Arcade is built on top of Pyglet and OpenGL") and its internal dependencies are used.
 
-### Note
-Arcade is built on top of Pyglet and OpenGL, so your video card must be compatible with OpenGL!
+### Requirements
+- Python >= 3.6
+- Arcade is built on top of `Pyglet` and `OpenGL`, so your video card must be compatible with `OpenGL`!
 
 ## Release History
 
