@@ -1,12 +1,9 @@
 """
-Starting Template
+MazeKent game
 """
 
 import arcade
-
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
-SCREEN_TITLE = 'MazeKent'
+import random
 
 
 class MazeKent(arcade.Window):
@@ -21,6 +18,13 @@ class MazeKent(arcade.Window):
     def __init__(self, width, height, title):
         super().__init__(width, height, title)
 
+        self.tile_empty = 0
+        self.tile_crate = 1
+
+        # Maze size
+        self.maze_width = 10
+        self.maze_height = 10
+
         arcade.set_background_color(arcade.color.AMAZON)
 
         # If you have sprite lists, you should create them here,
@@ -29,7 +33,10 @@ class MazeKent(arcade.Window):
     def setup(self):
         """ Set up the game variables. Call to re-start the game. """
         # Create your sprites and sprite lists here
-        pass
+
+        # Create the maze
+        maze = self.make_maze(self.maze_width, self.maze_height)
+        [print(m) for m in maze]
 
     def on_draw(self):
         """
@@ -83,13 +90,59 @@ class MazeKent(arcade.Window):
         """
         pass
 
+    # noinspection PyMethodMayBeStatic
+    def run(self):
+        """
+        Run game
 
-def main():
-    """ Main method """
-    game = MazeKent(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-    game.setup()
-    arcade.run()
+        :return:
+        """
 
+        arcade.run()
 
-if __name__ == "__main__":
-    main()
+    def create_grid(self, width: int, height: int) -> list:
+
+        grid = []
+
+        for row in range(height):
+            grid.append([])
+
+            for column in range(width):
+                if column % 2 == 1 and row % 2 == 1:
+                    grid[row].append(self.tile_empty)
+                elif column == 0 or row == 0 or column == width - 1 or row == height - 1:
+                    grid[row].append(self.tile_crate)
+                else:
+                    grid[row].append(self.tile_crate)
+
+        return grid
+
+    def make_maze(self, maze_width: int, maze_height: int) -> list:
+
+        maze = self.create_grid(maze_width, maze_height)
+
+        [print(g) for g in maze]
+        print()
+
+        w = (len(maze[0]) - 1) // 2
+        h = (len(maze) - 1) // 2
+        vis = [[0] * w + [1] for _ in range(h)] + [[1] * (w + 1)]
+
+        def walk(x: int, y: int):
+            vis[y][x] = 1
+
+            d = [(x - 1, y), (x, y + 1), (x + 1, y), (x, y - 1)]
+            random.shuffle(d)
+            for (xx, yy) in d:
+                if vis[yy][xx]:
+                    continue
+                if xx == x:
+                    maze[max(y, yy) * 2][x * 2 + 1] = self.tile_empty
+                if yy == y:
+                    maze[y * 2 + 1][max(x, xx) * 2] = self.tile_empty
+
+                walk(xx, yy)
+
+        walk(random.randrange(w), random.randrange(h))
+
+        return maze
