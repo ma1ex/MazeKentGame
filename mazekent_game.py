@@ -9,6 +9,102 @@ from typing import (
 )
 
 
+class PlayerCharacter(arcade.Sprite):
+    """
+    Player class
+    """
+
+    def __init__(self):
+
+        # Set up parent class
+        super().__init__()
+
+        self.updates_per_frame = 3  # Temporarily hardcoded
+
+        # Used for flipping between image sequences
+        self.cur_texture = 0
+        self.cur_idle_texture = 0
+
+        self.scale = 0.9  # Temporarily hardcoded
+
+        # Adjust the collision box. Default includes too much empty space
+        # side-to-side. Box is centered at sprite center, (0, 0)
+        # self.points = [[-22, -64], [22, -64], [22, 28], [-22, 28]]
+        self.points = [[-2, -34], [18, 0], [0, 0], [-16, 18]]
+
+        # --- Load Textures ---
+
+        # Images from Kenney.nl's Asset Pack 3
+        main_path = 'data/images/tiles/characters/hero/hero'  # Temporarily hardcoded
+
+        # Load textures for idle standing
+        self.idle_texture = arcade.load_texture(f'{main_path}_idle.png')
+
+        # Load textures for walking
+        self.walk_top_textures = [arcade.load_texture(f'{main_path}_walk_top{i}.png') for i in range(9)]
+        self.walk_down_textures = [arcade.load_texture(f'{main_path}_walk_down{i}.png') for i in range(9)]
+        self.walk_left_textures = [arcade.load_texture(f'{main_path}_walk_left{i}.png') for i in range(9)]
+        self.walk_right_textures = [arcade.load_texture(f'{main_path}_walk_right{i}.png') for i in range(9)]
+
+    def update_animation(self, delta_time: float = 1/60):
+
+        # self.cur_texture += 1
+        # if self.cur_texture > 7 * self.updates_per_frame:
+        #     self.cur_texture = 0
+        # frame = self.cur_texture // self.updates_per_frame
+        # direction = self.character_face_direction
+        # self.texture = self.walk_down_textures[frame][direction]
+
+        # Idle animation
+
+        # Stoped
+        if self.change_x == 0 and self.change_y == 0:
+            self.texture = self.idle_texture
+            return
+
+        # Left
+        if self.change_x < 0:
+            self.walk_character(self.walk_left_textures)
+
+        # Right
+        if self.change_x > 0:
+            self.walk_character(self.walk_right_textures)
+
+        # Down
+        elif self.change_y < 0:
+            self.walk_character(self.walk_down_textures)
+
+        # Top
+        elif self.change_y > 0:
+            self.walk_character(self.walk_top_textures)
+
+    def walk_character(self, texture_list: list) -> None:
+        """
+        Walking animation
+
+        :param texture_list: texture list
+        :return: None
+        """
+        self.cur_texture += 1
+
+        if self.cur_texture > 7 * self.updates_per_frame:
+            self.cur_texture = 0
+
+        frame = self.cur_texture // self.updates_per_frame
+        self.texture = texture_list[frame]
+
+    # noinspection PyMethodMayBeStatic
+    def load_texture_pair(self, filename):
+        """
+        Load a texture pair, with the second being a mirror image.
+        """
+
+        return [
+            arcade.load_texture(filename),
+            arcade.load_texture(filename, flipped_horizontally=True)
+        ]
+
+
 class MazeKent(arcade.Window):
     """
     Main application class
@@ -28,29 +124,49 @@ class MazeKent(arcade.Window):
         self.tile_crate = 1
 
         # Maze default size
-        self.maze_width = 10
-        self.maze_height = 10
+        self.maze_width = 11
+        self.maze_height = 11
 
         # Sprites config
-        self.native_sprite_size = 128
-        self.sprite_scaling = 0.40
+        self.native_sprite_size = 32  # 128
+        self.sprite_scaling = 1.7     # 0.40
         self.sprite_size = self.native_sprite_size * self.sprite_scaling
 
         # Sprites
-        self.sprite_wall = r'data/images/tiles/brickTextureWhite.png'
+        # self.sprite_wall = r'data/images/tiles/brickTextureWhite.png'
+        self.sprite_wall = r'data/images/tiles/wall/wall_labyrinth_style1_i.png'
+        self.sprite_wall_list = [
+            r'data/images/tiles/wall/wall_labyrinth_style1_a.png',
+            r'data/images/tiles/wall/wall_labyrinth_style1_g.png',
+            r'data/images/tiles/wall/wall_labyrinth_style1_i.png',
+            r'data/images/tiles/wall/wall_labyrinth_style1_k.png',
+            r'data/images/tiles/wall/wall_labyrinth_style1_l.png',
+        ]
+        self.sprite_floor = r'data/images/tiles/floor_metal_b.png'
+        self.sprite_floor_list = [
+            r'data/images/tiles/floor/floor_labyrinth_undamaged_c.png',
+            r'data/images/tiles/floor/floor_labyrinth_undamaged_e.png',
+            r'data/images/tiles/floor/floor_labyrinth_undamaged_i.png',
+            r'data/images/tiles/floor/floor_labyrinth_undamaged_k.png',
+            r'data/images/tiles/floor/floor_labyrinth_undamaged_l.png',
+        ]
         self.sprite_map_viewer = r'data/images/tiles/circle.png'
         self.map_viewer = None
+        self.player_sprite = None
 
         # Sprite lists
         self.wall_list = None
+        self.floor_list = None
         self.map_viewer_list = None
+        self.player_list = None
 
         # Used to scroll
         self.view_bottom = 0
         self.view_left = 0
 
         # Background color
-        arcade.set_background_color(arcade.color.AMAZON)
+        # arcade.set_background_color(arcade.color.AMAZON)
+        arcade.set_background_color((50, 50, 50))
 
         # Time to process
         self.processing_time = 0
@@ -61,8 +177,11 @@ class MazeKent(arcade.Window):
         # Create your sprites and sprite lists here
 
         # Sprite lists init
+        # self.wall_list = arcade.SpriteList(use_spatial_hash=True)
         self.wall_list = arcade.SpriteList()
-        self.map_viewer_list = arcade.SpriteList()
+        self.floor_list = arcade.SpriteList()
+        # self.map_viewer_list = arcade.SpriteList()
+        self.player_list = arcade.SpriteList()
 
         # Create the maze
         maze = self.make_maze(self.maze_width, self.maze_height)
@@ -70,21 +189,49 @@ class MazeKent(arcade.Window):
         for row in range(self.maze_height):
             for column in range(self.maze_width):
                 if maze[row][column] == 1:
-                    wall = arcade.Sprite(self.sprite_wall, self.sprite_scaling)
+                    # wall = arcade.Sprite(self.sprite_wall, self.sprite_scaling)
+                    wall = arcade.Sprite(random.choice(self.sprite_wall_list), self.sprite_scaling)
                     wall.center_x = column * self.sprite_size + self.sprite_size / 2
                     wall.center_y = row * self.sprite_size + self.sprite_size / 2
                     self.wall_list.append(wall)
+                else:
+                    # floor = arcade.Sprite(self.sprite_floor, self.sprite_scaling)
+                    floor = arcade.Sprite(random.choice(self.sprite_floor_list), self.sprite_scaling)
+                    floor.center_x = column * self.sprite_size + self.sprite_size / 2
+                    floor.center_y = row * self.sprite_size + self.sprite_size / 2
+                    self.floor_list.append(floor)
 
-        # Set up the map_viewer
-        self.map_viewer = arcade.Sprite(self.sprite_map_viewer)
-        self.map_viewer_list.append(self.map_viewer)
+        # Set up the map_viewer ------------------------------------------------
+        # self.map_viewer = arcade.Sprite(self.sprite_map_viewer)
+        # self.map_viewer_list.append(self.map_viewer)
+        #
+        # # Set map_viewer position
+        # self.map_viewer.center_x = 0
+        # self.map_viewer.center_y = 0
 
-        # Set map_viewer position
-        self.map_viewer.center_x = 0
-        self.map_viewer.center_y = 0
+        # Set up the player ----------------------------------------------------
+        self.player_sprite = PlayerCharacter()
+        self.player_list.append(self.player_sprite)
 
-        # self.physics_engine = arcade.PhysicsEngineSimple(arcade.Sprite(), self.wall_list)
-        self.physics_engine = arcade.PhysicsEngineSimple(self.map_viewer, arcade.SpriteList())
+        # Start position
+        self.player_sprite.center_x = self.maze_width * self.sprite_size - 80
+        self.player_sprite.center_y = self.maze_height * self.sprite_size - 75
+
+        # Checking for collision with a wall at the starting position
+        placed = False
+        while not placed:
+
+            # Are we in a wall?
+            walls_hit = arcade.check_for_collision_with_list(self.player_sprite, self.wall_list)
+            if len(walls_hit) == 0:
+                # Not in a wall! Success!
+                placed = True
+            else:
+                self.player_sprite.center_x -= 1
+                self.player_sprite.center_y -= 1
+
+        # self.physics_engine = arcade.PhysicsEngineSimple(self.map_viewer, arcade.SpriteList())
+        self.physics_engine = arcade.PhysicsEngineSimple(self.player_sprite, self.wall_list)
 
         # Set the viewport boundaries
         # These numbers set where we have 'scrolled' to.
@@ -92,6 +239,8 @@ class MazeKent(arcade.Window):
         self.view_bottom = 0
 
         print(f'Total wall blocks: {len(self.wall_list)}')
+        print(f'Total floor blocks: {len(self.floor_list)}')
+        print(f'Total blocks: {len(self.wall_list) + len(self.floor_list)}')
 
     def on_draw(self):
         """
@@ -109,7 +258,9 @@ class MazeKent(arcade.Window):
 
         # Call draw() on all your sprite lists below
         self.wall_list.draw()
-        self.map_viewer_list.draw()
+        self.floor_list.draw()
+        # self.map_viewer_list.draw()
+        self.player_list.draw()
 
         self.draw_time = timeit.default_timer() - draw_start_time
 
@@ -124,34 +275,67 @@ class MazeKent(arcade.Window):
 
         self.physics_engine.update()
 
+        # Update the players animation
+        self.player_list.update_animation()
+
         # --- Manage Scrolling ---
 
         # Track if we need to change the viewport
 
         changed = False
 
+        # # Scroll left
+        # left_bndry = self.view_left + 200
+        # if self.map_viewer.left < left_bndry:
+        #     self.view_left -= left_bndry - self.map_viewer.left
+        #     changed = True
+        #
+        # # Scroll right
+        # right_bndry = self.view_left + self.screen_width - 200
+        # if self.map_viewer.right > right_bndry:
+        #     self.view_left += self.map_viewer.right - right_bndry
+        #     changed = True
+        #
+        # # Scroll up
+        # top_bndry = self.view_bottom + self.screen_height - 200
+        # if self.map_viewer.top > top_bndry:
+        #     self.view_bottom += self.map_viewer.top - top_bndry
+        #     changed = True
+        #
+        # # Scroll down
+        # bottom_bndry = self.view_bottom + 200
+        # if self.map_viewer.bottom < bottom_bndry:
+        #     self.view_bottom -= bottom_bndry - self.map_viewer.bottom
+        #     changed = True
+        #
+        # if changed:
+        #     arcade.set_viewport(self.view_left,
+        #                         self.screen_width + self.view_left,
+        #                         self.view_bottom,
+        #                         self.screen_height + self.view_bottom)
+
         # Scroll left
         left_bndry = self.view_left + 200
-        if self.map_viewer.left < left_bndry:
-            self.view_left -= left_bndry - self.map_viewer.left
+        if self.player_sprite.left < left_bndry:
+            self.view_left -= left_bndry - self.player_sprite.left
             changed = True
 
         # Scroll right
         right_bndry = self.view_left + self.screen_width - 200
-        if self.map_viewer.right > right_bndry:
-            self.view_left += self.map_viewer.right - right_bndry
+        if self.player_sprite.right > right_bndry:
+            self.view_left += self.player_sprite.right - right_bndry
             changed = True
 
         # Scroll up
         top_bndry = self.view_bottom + self.screen_height - 200
-        if self.map_viewer.top > top_bndry:
-            self.view_bottom += self.map_viewer.top - top_bndry
+        if self.player_sprite.top > top_bndry:
+            self.view_bottom += self.player_sprite.top - top_bndry
             changed = True
 
         # Scroll down
         bottom_bndry = self.view_bottom + 200
-        if self.map_viewer.bottom < bottom_bndry:
-            self.view_bottom -= bottom_bndry - self.map_viewer.bottom
+        if self.player_sprite.bottom < bottom_bndry:
+            self.view_bottom -= bottom_bndry - self.player_sprite.bottom
             changed = True
 
         if changed:
@@ -171,42 +355,35 @@ class MazeKent(arcade.Window):
         http://arcade.academy/arcade.key.html
         """
 
-        # if key == arcade.key.UP:
-        #     # self.p_y += self.player_test_step
-        #     # self.player_test_move = True
-        #     self.map_viewer.change_y = 25
-        # elif key == arcade.key.DOWN:
-        #     # self.p_y -= self.player_test_step
-        #     # self.player_test_move = True
-        #     self.map_viewer.change_y = -25
-        # elif key == arcade.key.LEFT:
-        #     # self.p_x -= self.player_test_step
-        #     # self.player_test_move = True
-        #     self.map_viewer.change_x = -25
-        # elif key == arcade.key.RIGHT:
-        #     # self.p_x += self.player_test_step
-        #     # self.player_test_move = True
-        #     self.map_viewer.change_x = 25
+        if key == arcade.key.UP:
+            self.player_sprite.change_y = 5
+        elif key == arcade.key.DOWN:
+            self.player_sprite.change_y = -5
+        elif key == arcade.key.LEFT:
+            self.player_sprite.change_x = -5
+        elif key == arcade.key.RIGHT:
+            self.player_sprite.change_x = 5
 
         if key == arcade.key.W:
-            # self.p_y += self.player_test_step
-            # self.player_test_move = True
-            self.map_viewer.change_y = 30
+            self.player_sprite.change_y = 5
         elif key == arcade.key.S:
-            # self.p_y -= self.player_test_step
-            # self.player_test_move = True
-            self.map_viewer.change_y = -30
+            self.player_sprite.change_y = -5
         elif key == arcade.key.A:
-            # self.p_x -= self.player_test_step
-            # self.player_test_move = True
-            self.map_viewer.change_x = -30
+            self.player_sprite.change_x = -5
         elif key == arcade.key.D:
-            # self.p_x += self.player_test_step
-            # self.player_test_move = True
-            self.map_viewer.change_x = 30
+            self.player_sprite.change_x = 5
 
+        # if key == arcade.key.W:
+        #     self.map_viewer.change_y = 30
+        # elif key == arcade.key.S:
+        #     self.map_viewer.change_y = -30
+        # elif key == arcade.key.A:
+        #     self.map_viewer.change_x = -30
+        # elif key == arcade.key.D:
+        #     self.map_viewer.change_x = 30
+
+        # "M" key for view full map
         elif key == arcade.key.M:
-            # print('"M" key was pressed!')
             self.show_full_map()
 
     def on_key_release(self, key, key_modifiers):
@@ -214,17 +391,20 @@ class MazeKent(arcade.Window):
         Called whenever the user lets off a previously pressed key.
         """
 
-        # self.player_test_move = False
-
-        # if key == arcade.key.UP or key == arcade.key.DOWN:
-        #     self.map_viewer.change_y = 0
-        # elif key == arcade.key.LEFT or key == arcade.key.RIGHT:
-        #     self.map_viewer.change_x = 0
+        if key == arcade.key.UP or key == arcade.key.DOWN:
+            self.player_sprite.change_y = 0
+        elif key == arcade.key.LEFT or key == arcade.key.RIGHT:
+            self.player_sprite.change_x = 0
 
         if key == arcade.key.W or key == arcade.key.S:
-            self.map_viewer.change_y = 0
+            self.player_sprite.change_y = 0
         elif key == arcade.key.A or key == arcade.key.D:
-            self.map_viewer.change_x = 0
+            self.player_sprite.change_x = 0
+
+        # if key == arcade.key.W or key == arcade.key.S:
+        #     self.map_viewer.change_y = 0
+        # elif key == arcade.key.A or key == arcade.key.D:
+        #     self.map_viewer.change_x = 0
 
         elif key == arcade.key.M:
             self.show_full_map(release=True)
