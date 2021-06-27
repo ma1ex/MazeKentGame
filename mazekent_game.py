@@ -132,7 +132,8 @@ class MazeKent(arcade.Window):
         self.sprite_scaling = 1.7     # 0.40
         self.sprite_size = self.native_sprite_size * self.sprite_scaling
 
-        # Sprites
+        # Sprites --------------------------------------------------------------
+        # Walls
         # self.sprite_wall = r'data/images/tiles/brickTextureWhite.png'
         self.sprite_wall = r'data/images/tiles/wall/wall_labyrinth_style1_i.png'
         self.sprite_wall_list = [
@@ -142,6 +143,7 @@ class MazeKent(arcade.Window):
             r'data/images/tiles/wall/wall_labyrinth_style1_k.png',
             r'data/images/tiles/wall/wall_labyrinth_style1_l.png',
         ]
+        # Floor
         self.sprite_floor = r'data/images/tiles/floor_metal_b.png'
         self.sprite_floor_list = [
             r'data/images/tiles/floor/floor_labyrinth_undamaged_c.png',
@@ -150,15 +152,27 @@ class MazeKent(arcade.Window):
             r'data/images/tiles/floor/floor_labyrinth_undamaged_k.png',
             r'data/images/tiles/floor/floor_labyrinth_undamaged_l.png',
         ]
-        self.sprite_map_viewer = r'data/images/tiles/circle.png'
-        self.map_viewer = None
+        # Player
         self.player_sprite = None
 
-        # Sprite lists
+        # Items
+        self.item_chip = r'data/images/tiles/items/battery.png'
+
+        # Debug player
+        self.sprite_map_viewer = r'data/images/tiles/circle.png'
+        self.map_viewer = None
+
+        # Sprite lists ---------------------------------------------------------
         self.wall_list = None
         self.floor_list = None
         self.map_viewer_list = None
         self.player_list = None
+        self.items_list = None
+
+        # Available floor coords - for place game objects
+        self.unused_coords_list = []
+        self.player_start_coords = None
+        self.exit_start_coords = None
 
         # Used to scroll
         self.view_bottom = 0
@@ -181,25 +195,35 @@ class MazeKent(arcade.Window):
         self.wall_list = arcade.SpriteList()
         self.floor_list = arcade.SpriteList()
         # self.map_viewer_list = arcade.SpriteList()
+        self.items_list = arcade.SpriteList()
         self.player_list = arcade.SpriteList()
 
         # Create the maze
         maze = self.make_maze(self.maze_width, self.maze_height)
+        # [print(i) for i in maze]
 
         for row in range(self.maze_height):
             for column in range(self.maze_width):
                 if maze[row][column] == 1:
-                    # wall = arcade.Sprite(self.sprite_wall, self.sprite_scaling)
                     wall = arcade.Sprite(random.choice(self.sprite_wall_list), self.sprite_scaling)
                     wall.center_x = column * self.sprite_size + self.sprite_size / 2
                     wall.center_y = row * self.sprite_size + self.sprite_size / 2
                     self.wall_list.append(wall)
                 else:
+                    # Add unused coords for place mics items
+                    self.unused_coords_list.append((
+                        column * self.sprite_size + self.sprite_size / 2,
+                        row * self.sprite_size + self.sprite_size / 2
+                    ))
+
                     # floor = arcade.Sprite(self.sprite_floor, self.sprite_scaling)
                     floor = arcade.Sprite(random.choice(self.sprite_floor_list), self.sprite_scaling)
                     floor.center_x = column * self.sprite_size + self.sprite_size / 2
                     floor.center_y = row * self.sprite_size + self.sprite_size / 2
                     self.floor_list.append(floor)
+
+        # print()
+        # [print(i) for i in self.unused_coords_list]
 
         # Set up the map_viewer ------------------------------------------------
         # self.map_viewer = arcade.Sprite(self.sprite_map_viewer)
@@ -214,22 +238,47 @@ class MazeKent(arcade.Window):
         self.player_list.append(self.player_sprite)
 
         # Start position
-        self.player_sprite.center_x = self.maze_width * self.sprite_size - 80
-        self.player_sprite.center_y = self.maze_height * self.sprite_size - 75
+        # Calculating the player's starting position from the `self.unused_coords_list()`
+        player_coords_idx = self.unused_coords_list.index(max([i for i in self.unused_coords_list]))
+        self.player_start_coords = self.unused_coords_list.pop(player_coords_idx)
+        # self.player_sprite.center_x = self.maze_width * self.sprite_size - 80
+        # self.player_sprite.center_y = self.maze_height * self.sprite_size - 75
+        self.player_sprite.center_x = self.player_start_coords[0]
+        self.player_sprite.center_y = self.player_start_coords[1]
 
         # Checking for collision with a wall at the starting position
-        placed = False
-        while not placed:
+        # placed = False
+        # while not placed:
+        #
+        #     # Are we in a wall?
+        #     walls_hit = arcade.check_for_collision_with_list(self.player_sprite, self.wall_list)
+        #     if len(walls_hit) == 0:
+        #         # Not in a wall! Success!
+        #         placed = True
+        #     else:
+        #         self.player_sprite.center_x -= 1
+        #         self.player_sprite.center_y -= 1
 
-            # Are we in a wall?
-            walls_hit = arcade.check_for_collision_with_list(self.player_sprite, self.wall_list)
-            if len(walls_hit) == 0:
-                # Not in a wall! Success!
-                placed = True
-            else:
-                self.player_sprite.center_x -= 1
-                self.player_sprite.center_y -= 1
+        # Setup Exit current level objet ---------------------------------------
+        # Calculating the exit's starting position from the `self.unused_coords_list()`
+        exit_coords_idx = self.unused_coords_list.index(min([i for i in self.unused_coords_list]))
+        self.exit_start_coords = self.unused_coords_list.pop(exit_coords_idx)
 
+        # Setup items ----------------------------------------------------------
+        random.shuffle(self.unused_coords_list)
+        random.shuffle(self.unused_coords_list)
+
+        count_items = 3
+        if len(self.unused_coords_list) >= count_items:
+            for item in range(count_items):
+                x, y = self.unused_coords_list.pop()
+                print(x, y)
+                device = arcade.Sprite(self.item_chip, 0.12)
+                device.center_x = x
+                device.center_y = y
+                self.items_list.append(device)
+
+        # Setup physics engine -------------------------------------------------
         # self.physics_engine = arcade.PhysicsEngineSimple(self.map_viewer, arcade.SpriteList())
         self.physics_engine = arcade.PhysicsEngineSimple(self.player_sprite, self.wall_list)
 
@@ -238,6 +287,7 @@ class MazeKent(arcade.Window):
         self.view_left = 0
         self.view_bottom = 0
 
+        # Debug info -----------------------------------------------------------
         print(f'Total wall blocks: {len(self.wall_list)}')
         print(f'Total floor blocks: {len(self.floor_list)}')
         print(f'Total blocks: {len(self.wall_list) + len(self.floor_list)}')
@@ -260,6 +310,7 @@ class MazeKent(arcade.Window):
         self.wall_list.draw()
         self.floor_list.draw()
         # self.map_viewer_list.draw()
+        self.items_list.draw()
         self.player_list.draw()
 
         self.draw_time = timeit.default_timer() - draw_start_time
