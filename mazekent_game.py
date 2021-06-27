@@ -118,6 +118,7 @@ class MazeKent(arcade.Window):
         self.screen_height = height
 
         self.physics_engine = None
+        self.score = 0
 
         # Fill maze
         self.tile_empty = 0
@@ -156,7 +157,7 @@ class MazeKent(arcade.Window):
         self.player_sprite = None
 
         # Items
-        self.item_chip = r'data/images/tiles/items/battery.png'
+        self.item_chip = r'data/images/tiles/items/battery_nucleus.png'
 
         # Debug player
         self.sprite_map_viewer = r'data/images/tiles/circle.png'
@@ -313,6 +314,13 @@ class MazeKent(arcade.Window):
         self.items_list.draw()
         self.player_list.draw()
 
+        # Put the text on the screen.
+        output = f'Score: {self.score}'
+        arcade.draw_text(output,
+                         self.view_left + 20,
+                         self.screen_height - 20 + self.view_bottom,
+                         arcade.color.WHITE, 16)
+
         self.draw_time = timeit.default_timer() - draw_start_time
 
     def on_update(self, delta_time):
@@ -328,6 +336,14 @@ class MazeKent(arcade.Window):
 
         # Update the players animation
         self.player_list.update_animation()
+
+        # Collisions with items
+        battery_hit_list = arcade.check_for_collision_with_list(
+            self.player_sprite, self.items_list)
+
+        for item in battery_hit_list:
+            item.kill()
+            self.score += 1
 
         # --- Manage Scrolling ---
 
