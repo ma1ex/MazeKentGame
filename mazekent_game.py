@@ -134,6 +134,7 @@ class MazeKent(arcade.Window):
         self.sprite_size = self.native_sprite_size * self.sprite_scaling
 
         # Sprites --------------------------------------------------------------
+
         # Walls
         # self.sprite_wall = r'data/images/tiles/brickTextureWhite.png'
         self.sprite_wall = r'data/images/tiles/wall/wall_labyrinth_style1_i.png'
@@ -144,6 +145,7 @@ class MazeKent(arcade.Window):
             r'data/images/tiles/wall/wall_labyrinth_style1_k.png',
             r'data/images/tiles/wall/wall_labyrinth_style1_l.png',
         ]
+
         # Floor
         self.sprite_floor = r'data/images/tiles/floor_metal_b.png'
         self.sprite_floor_list = [
@@ -153,11 +155,15 @@ class MazeKent(arcade.Window):
             r'data/images/tiles/floor/floor_labyrinth_undamaged_k.png',
             r'data/images/tiles/floor/floor_labyrinth_undamaged_l.png',
         ]
+
         # Player
         self.player_sprite = None
 
         # Items
         self.item_chip = r'data/images/tiles/items/battery_nucleus.png'
+
+        # Exit level
+        self.exit_sprite = None
 
         # Debug player
         self.sprite_map_viewer = r'data/images/tiles/circle.png'
@@ -203,6 +209,7 @@ class MazeKent(arcade.Window):
         maze = self.make_maze(self.maze_width, self.maze_height)
         # [print(i) for i in maze]
 
+        # Generate walls and floor
         for row in range(self.maze_height):
             for column in range(self.maze_width):
                 if maze[row][column] == 1:
@@ -264,6 +271,10 @@ class MazeKent(arcade.Window):
         # Calculating the exit's starting position from the `self.unused_coords_list()`
         exit_coords_idx = self.unused_coords_list.index(min([i for i in self.unused_coords_list]))
         self.exit_start_coords = self.unused_coords_list.pop(exit_coords_idx)
+        # Set up the Exit level
+        self.exit_sprite = arcade.Sprite(self.sprite_map_viewer, 0.6)
+        self.exit_sprite.center_x = self.exit_start_coords[0]
+        self.exit_sprite.center_y = self.exit_start_coords[1]
 
         # Setup items ----------------------------------------------------------
         random.shuffle(self.unused_coords_list)
@@ -313,6 +324,7 @@ class MazeKent(arcade.Window):
         # self.map_viewer_list.draw()
         self.items_list.draw()
         self.player_list.draw()
+        self.exit_sprite.draw()
 
         # Put the text on the screen.
         output = f'Score: {self.score}'
