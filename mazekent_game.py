@@ -107,7 +107,7 @@ class PlayerCharacter(arcade.Sprite):
 
 class ExitItem(arcade.Sprite):
     """
-    Player class
+    Level tem exit class
     """
 
     def __init__(self):
@@ -130,7 +130,7 @@ class ExitItem(arcade.Sprite):
 
         # --- Load Textures ---
 
-        # Images from Kenney.nl's Asset Pack 3
+        # Images from opengameart.org's Denzi SciFi Pack
         main_path = 'data/images/tiles/portal/portal'  # Temporarily hardcoded
 
         # Load textures for idle standing
@@ -163,6 +163,7 @@ class MazeKent(arcade.Window):
 
         self.physics_engine = None
         self.score = 0
+        self.of_score = 3
 
         # Fill maze
         self.tile_empty = 0
@@ -328,9 +329,9 @@ class MazeKent(arcade.Window):
         random.shuffle(self.unused_coords_list)
         random.shuffle(self.unused_coords_list)
 
-        count_items = 3
-        if len(self.unused_coords_list) >= count_items:
-            for item in range(count_items):
+        # count_items = 3
+        if len(self.unused_coords_list) >= self.of_score:
+            for item in range(self.of_score):
                 x, y = self.unused_coords_list.pop()
                 print(x, y)
                 device = arcade.Sprite(self.item_chip, 0.12)
@@ -397,7 +398,11 @@ class MazeKent(arcade.Window):
         # Update the players animation
         self.player_list.update_animation()
 
-        self.exit_list.update_animation()
+        # Update Item exit level animation depending on the number of scores
+        if self.score < self.of_score:
+            self.exit_sprite.texture = self.exit_sprite.idle_texture
+        else:
+            self.exit_list.update_animation()
 
         # Collisions with items
         battery_hit_list = arcade.check_for_collision_with_list(
