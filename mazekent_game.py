@@ -105,6 +105,50 @@ class PlayerCharacter(arcade.Sprite):
         ]
 
 
+class ExitItem(arcade.Sprite):
+    """
+    Player class
+    """
+
+    def __init__(self):
+
+        # Set up parent class
+        super().__init__()
+
+        self.updates_per_frame = 7  # Temporarily hardcoded
+
+        # Used for flipping between image sequences
+        self.cur_texture = 0
+        self.cur_idle_texture = 0
+
+        self.scale = 1  # Temporarily hardcoded
+
+        # Adjust the collision box. Default includes too much empty space
+        # side-to-side. Box is centered at sprite center, (0, 0)
+        # self.points = [[-22, -64], [22, -64], [22, 28], [-22, 28]]
+        self.points = [[-2, -34], [18, 0], [0, 0], [-16, 18]]
+
+        # --- Load Textures ---
+
+        # Images from Kenney.nl's Asset Pack 3
+        main_path = 'data/images/tiles/portal/portal'  # Temporarily hardcoded
+
+        # Load textures for idle standing
+        self.idle_texture = arcade.load_texture(f'{main_path}_off.png')
+
+        # Load textures for animation
+        self.exit_on_textures = [arcade.load_texture(f'{main_path}_on_{i}.png') for i in range(3)]
+
+    def update_animation(self, delta_time: float = 1/60):
+
+        self.cur_texture += 1
+        if self.cur_texture > 2 * self.updates_per_frame:
+            self.cur_texture = 0
+
+        frame = self.cur_texture // self.updates_per_frame
+        self.texture = self.exit_on_textures[frame]
+
+
 class MazeKent(arcade.Window):
     """
     Main application class
@@ -175,6 +219,7 @@ class MazeKent(arcade.Window):
         self.map_viewer_list = None
         self.player_list = None
         self.items_list = None
+        self.exit_list = None
 
         # Available floor coords - for place game objects
         self.unused_coords_list = []
@@ -204,6 +249,7 @@ class MazeKent(arcade.Window):
         # self.map_viewer_list = arcade.SpriteList()
         self.items_list = arcade.SpriteList()
         self.player_list = arcade.SpriteList()
+        self.exit_list = arcade.SpriteList()
 
         # Create the maze
         maze = self.make_maze(self.maze_width, self.maze_height)
@@ -269,10 +315,12 @@ class MazeKent(arcade.Window):
 
         # Setup Exit current level objet ---------------------------------------
         # Calculating the exit's starting position from the `self.unused_coords_list()`
+        # Set up the Exit level
+        self.exit_sprite = ExitItem()
+        self.exit_list.append(self.exit_sprite)
         exit_coords_idx = self.unused_coords_list.index(min([i for i in self.unused_coords_list]))
         self.exit_start_coords = self.unused_coords_list.pop(exit_coords_idx)
-        # Set up the Exit level
-        self.exit_sprite = arcade.Sprite(self.sprite_map_viewer, 0.6)
+
         self.exit_sprite.center_x = self.exit_start_coords[0]
         self.exit_sprite.center_y = self.exit_start_coords[1]
 
@@ -324,7 +372,7 @@ class MazeKent(arcade.Window):
         # self.map_viewer_list.draw()
         self.items_list.draw()
         self.player_list.draw()
-        self.exit_sprite.draw()
+        self.exit_list.draw()
 
         # Put the text on the screen.
         output = f'Score: {self.score}'
@@ -348,6 +396,8 @@ class MazeKent(arcade.Window):
 
         # Update the players animation
         self.player_list.update_animation()
+
+        self.exit_list.update_animation()
 
         # Collisions with items
         battery_hit_list = arcade.check_for_collision_with_list(
