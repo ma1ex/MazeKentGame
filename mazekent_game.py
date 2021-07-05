@@ -63,11 +63,11 @@ class PlayerCharacter(arcade.Sprite):
             return
 
         # Left
-        if self.change_x < 0:
+        elif self.change_x < 0:
             self.walk_character(self.walk_left_textures)
 
         # Right
-        if self.change_x > 0:
+        elif self.change_x > 0:
             self.walk_character(self.walk_right_textures)
 
         # Down
@@ -77,6 +77,9 @@ class PlayerCharacter(arcade.Sprite):
         # Top
         elif self.change_y > 0:
             self.walk_character(self.walk_top_textures)
+
+        # else:
+        #     self.teleport_animation()
 
     def walk_character(self, texture_list: list) -> None:
         """
@@ -93,16 +96,16 @@ class PlayerCharacter(arcade.Sprite):
         frame = self.cur_texture // self.updates_per_frame
         self.texture = texture_list[frame]
 
-    # noinspection PyMethodMayBeStatic
-    def load_texture_pair(self, filename):
-        """
-        Load a texture pair, with the second being a mirror image.
-        """
-
-        return [
-            arcade.load_texture(filename),
-            arcade.load_texture(filename, flipped_horizontally=True)
-        ]
+    # def teleport_animation(self):
+    #     # [self.scale -= 0.03 for _ in range(20)]
+    #     for _ in range(700):
+    #         if self.scale == 0.0:
+    #             break
+    #         else:
+    #             # self.scale -= 0.003 * self.updates_per_frame
+    #             self.scale -= 0.001
+    #
+    #     # self.kill()
 
 
 class ExitItem(arcade.Sprite):
@@ -164,6 +167,7 @@ class MazeKent(arcade.Window):
         self.physics_engine = None
         self.score = 0
         self.of_score = 3
+        self.game_over = False
 
         # Fill maze
         self.tile_empty = 0
@@ -213,6 +217,9 @@ class MazeKent(arcade.Window):
         # Debug player
         self.sprite_map_viewer = r'data/images/tiles/circle.png'
         self.map_viewer = None
+
+        # Items bar
+        self.collect_item_sprite = arcade.Sprite(self.item_chip, 0.1)
 
         # Sprite lists ---------------------------------------------------------
         self.wall_list = None
@@ -334,7 +341,7 @@ class MazeKent(arcade.Window):
             for item in range(self.of_score):
                 x, y = self.unused_coords_list.pop()
                 print(x, y)
-                device = arcade.Sprite(self.item_chip, 0.12)
+                device = arcade.Sprite(self.item_chip, 0.12)  # 0.12
                 device.center_x = x
                 device.center_y = y
                 self.items_list.append(device)
@@ -352,6 +359,8 @@ class MazeKent(arcade.Window):
         print(f'Total wall blocks: {len(self.wall_list)}')
         print(f'Total floor blocks: {len(self.floor_list)}')
         print(f'Total blocks: {len(self.wall_list) + len(self.floor_list)}')
+
+        self.game_over = False
 
     def on_draw(self):
         """
@@ -376,11 +385,23 @@ class MazeKent(arcade.Window):
         self.exit_list.draw()
 
         # Put the text on the screen.
-        output = f'Score: {self.score}'
+        self.collect_item_sprite.set_position(
+            center_x=self.view_left + 20,
+            center_y=self.screen_height - 20 + self.view_bottom,
+        )
+        self.collect_item_sprite.draw()
+        output = f'{self.score} / {self.of_score}'
+        # output = f'Score: {self.score} / {self.of_score}'
         arcade.draw_text(output,
-                         self.view_left + 20,
-                         self.screen_height - 20 + self.view_bottom,
+                         self.view_left + 40,
+                         self.screen_height - 32.5 + self.view_bottom,
                          arcade.color.WHITE, 16)
+
+        # Draw game over
+        if self.game_over:
+            x = self.view_left + (self.screen_width / 2) - 200
+            y = self.screen_height - (self.screen_height / 2) + self.view_bottom
+            arcade.draw_text('Game Over', x, y, arcade.color.RED_DEVIL, 90, bold=True)
 
         self.draw_time = timeit.default_timer() - draw_start_time
 
@@ -393,16 +414,24 @@ class MazeKent(arcade.Window):
 
         start_time = timeit.default_timer()
 
-        self.physics_engine.update()
+        if not self.game_over:
+            self.physics_engine.update()
 
-        # Update the players animation
-        self.player_list.update_animation()
+            # Update the players animation
+            self.player_list.update_animation()
 
         # Update Item exit level animation depending on the number of scores
         if self.score < self.of_score:
             self.exit_sprite.texture = self.exit_sprite.idle_texture
         else:
             self.exit_list.update_animation()
+            exit_hit_list = arcade.check_for_collision_with_list(
+                self.player_sprite, self.exit_list)
+
+            for _ in exit_hit_list:
+                # self.player_sprite.teleport_animation()
+                self.player_sprite.kill()
+                self.game_over = True
 
         # Collisions with items
         battery_hit_list = arcade.check_for_collision_with_list(
@@ -661,34 +690,36 @@ class MazeKent(arcade.Window):
         ratio = 0.0
 
         if self.screen_height < self.screen_width and self.maze_width > self.maze_height:
-            ratio = (self.sprite_size * self.maze_width) / self.screen_width
-            # print('1 cond')
+            # ratio = (self.sprite_size * self.maze_width) / self.screen_width
+            ratio = (self.sprite_size * self.maze_height) / self.screen_height
+            print('1 cond')
         elif self.screen_height < self.screen_width and self.maze_width < self.maze_height:
             ratio = (self.sprite_size * self.maze_height) / self.screen_height
-            # print('2 cond')
+            print('2 cond')
         elif self.screen_height < self.screen_width and self.maze_width == self.maze_height:
             ratio = (self.sprite_size * self.maze_width) / self.screen_height
-            # print('3 cond')
+            # ratio = (self.sprite_size * self.maze_height) / self.screen_width
+            print('3 cond')
 
         elif self.screen_height > self.screen_width and self.maze_height > self.maze_width:
             ratio = (self.sprite_size * self.maze_height) / self.screen_height
-            # print('4 cond')
+            print('4 cond')
         elif self.screen_height > self.screen_width and self.maze_height < self.maze_width:
             ratio = (self.sprite_size * self.maze_width) / self.screen_width
-            # print('5 cond')
+            print('5 cond')
         elif self.screen_height > self.screen_width and self.maze_height == self.maze_width:
             ratio = (self.sprite_size * self.maze_height) / self.screen_width
-            # print('6 cond')
+            print('6 cond')
 
         elif self.screen_height == self.screen_width and self.maze_height > self.maze_width:
             ratio = (self.sprite_size * self.maze_height) / self.screen_width
-            # print('7 cond')
+            print('7 cond')
         elif self.screen_height == self.screen_width and self.maze_height < self.maze_width:
             ratio = (self.sprite_size * self.maze_width) / self.screen_height
-            # print('8 cond')
+            print('8 cond')
         elif self.screen_height == self.screen_width and self.maze_height == self.maze_width:
             ratio = (self.sprite_size * self.maze_height) / self.screen_width
-            # print('9 cond')
+            print('9 cond')
 
         print(f'{ratio = }')
 
