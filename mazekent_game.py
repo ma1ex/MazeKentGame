@@ -110,7 +110,7 @@ class PlayerCharacter(arcade.Sprite):
 
 class ExitItem(arcade.Sprite):
     """
-    Level tem exit class
+    Level Item exit class
     """
 
     def __init__(self):
@@ -152,6 +152,50 @@ class ExitItem(arcade.Sprite):
         self.texture = self.exit_on_textures[frame]
 
 
+class BatteryItem(arcade.Sprite):
+    """
+    Battery Item class
+    """
+
+    def __init__(self):
+
+        # Set up parent class
+        super().__init__()
+
+        self.updates_per_frame = 7  # Temporarily hardcoded
+
+        # Used for flipping between image sequences
+        self.cur_texture = 0
+        self.cur_idle_texture = 0
+
+        self.scale = 0.12  # Temporarily hardcoded
+
+        # Adjust the collision box. Default includes too much empty space
+        # side-to-side. Box is centered at sprite center, (0, 0)
+        # self.points = [[-22, -64], [22, -64], [22, 28], [-22, 28]]
+        self.points = [[-2, -34], [18, 0], [0, 0], [-16, 18]]
+
+        # --- Load Textures ---
+
+        # Original game textures Pack
+        main_path = r'data/images/tiles/items/battery_nucleus'  # Temporarily hardcoded
+
+        # Load textures for idle standing
+        self.idle_texture = arcade.load_texture(f'{main_path}_off.png')
+
+        # Load textures for animation
+        # self.exit_on_textures = [arcade.load_texture(f'{main_path}_on_{i}.png') for i in range(3)]
+
+    # def update_animation(self, delta_time: float = 1/60):
+    #
+    #     self.cur_texture += 1
+    #     if self.cur_texture > 2 * self.updates_per_frame:
+    #         self.cur_texture = 0
+    #
+    #     frame = self.cur_texture // self.updates_per_frame
+    #     self.texture = self.exit_on_textures[frame]
+
+
 class MazeKent(arcade.Window):
     """
     Main application class
@@ -185,8 +229,6 @@ class MazeKent(arcade.Window):
         # Sprites --------------------------------------------------------------
 
         # Walls
-        # self.sprite_wall = r'data/images/tiles/brickTextureWhite.png'
-        self.sprite_wall = r'data/images/tiles/wall/wall_labyrinth_style1_i.png'
         self.sprite_wall_list = [
             r'data/images/tiles/wall/wall_labyrinth_style1_a.png',
             r'data/images/tiles/wall/wall_labyrinth_style1_g.png',
@@ -196,7 +238,6 @@ class MazeKent(arcade.Window):
         ]
 
         # Floor
-        self.sprite_floor = r'data/images/tiles/floor_metal_b.png'
         self.sprite_floor_list = [
             r'data/images/tiles/floor/floor_labyrinth_undamaged_c.png',
             r'data/images/tiles/floor/floor_labyrinth_undamaged_e.png',
@@ -209,7 +250,8 @@ class MazeKent(arcade.Window):
         self.player_sprite = None
 
         # Items
-        self.item_chip = r'data/images/tiles/items/battery_nucleus.png'
+        # self.item_battery = r'data/images/tiles/items/battery_nucleus_off.png'
+        self.item_battery = None
 
         # Exit level
         self.exit_sprite = None
@@ -219,7 +261,8 @@ class MazeKent(arcade.Window):
         self.map_viewer = None
 
         # Items bar
-        self.collect_item_sprite = arcade.Sprite(self.item_chip, 0.1)
+        # self.collect_item_sprite = arcade.Sprite(self.item_battery, 0.1)
+        self.collect_item_sprite = BatteryItem()
 
         # Sprite lists ---------------------------------------------------------
         self.wall_list = None
@@ -341,10 +384,15 @@ class MazeKent(arcade.Window):
             for item in range(self.of_score):
                 x, y = self.unused_coords_list.pop()
                 print(x, y)
-                device = arcade.Sprite(self.item_chip, 0.12)  # 0.12
-                device.center_x = x
-                device.center_y = y
-                self.items_list.append(device)
+                # device = arcade.Sprite(self.item_battery, 0.12)  # 0.12
+                # device.center_x = x
+                # device.center_y = y
+                # self.items_list.append(device)
+
+                battery = BatteryItem()
+                battery.center_x = x
+                battery.center_y = y
+                self.items_list.append(battery)
 
         # Setup physics engine -------------------------------------------------
         # self.physics_engine = arcade.PhysicsEngineSimple(self.map_viewer, arcade.SpriteList())
