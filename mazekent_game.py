@@ -157,7 +157,7 @@ class BatteryItem(arcade.Sprite):
     Battery Item class
     """
 
-    def __init__(self):
+    def __init__(self, idle_only=False):
 
         # Set up parent class
         super().__init__()
@@ -178,22 +178,30 @@ class BatteryItem(arcade.Sprite):
         # --- Load Textures ---
 
         # Original game textures Pack
-        main_path = r'data/images/tiles/items/battery_nucleus'  # Temporarily hardcoded
+        main_path = r'data/images/tiles/items/battery/battery'  # Temporarily hardcoded
 
         # Load textures for idle standing
         self.idle_texture = arcade.load_texture(f'{main_path}_off.png')
 
-        # Load textures for animation
-        # self.exit_on_textures = [arcade.load_texture(f'{main_path}_on_{i}.png') for i in range(3)]
+        # self.texture = self.idle_texture  # <- TEMP
 
-    # def update_animation(self, delta_time: float = 1/60):
-    #
-    #     self.cur_texture += 1
-    #     if self.cur_texture > 2 * self.updates_per_frame:
-    #         self.cur_texture = 0
-    #
-    #     frame = self.cur_texture // self.updates_per_frame
-    #     self.texture = self.exit_on_textures[frame]
+        # Load textures for animation
+        if idle_only:
+            self.texture = self.idle_texture
+        else:
+            self.battery_textures = [arcade.load_texture(f'{main_path}_{i}.png') for i in range(6)]
+
+    def update_animation(self, delta_time: float = 1/60):
+
+        self.cur_texture += 1
+        if self.cur_texture > 5 * self.updates_per_frame:
+            self.cur_texture = 0
+
+        frame = self.cur_texture // self.updates_per_frame
+        self.texture = self.battery_textures[frame]
+
+    def idle(self):
+        self.texture = self.idle_texture
 
 
 class MazeKent(arcade.Window):
@@ -250,19 +258,16 @@ class MazeKent(arcade.Window):
         self.player_sprite = None
 
         # Items
-        # self.item_battery = r'data/images/tiles/items/battery_nucleus_off.png'
-        self.item_battery = None
 
         # Exit level
         self.exit_sprite = None
 
+        # Items bar
+        self.items_bar_battery = BatteryItem(idle_only=True)
+
         # Debug player
         self.sprite_map_viewer = r'data/images/tiles/circle.png'
         self.map_viewer = None
-
-        # Items bar
-        # self.collect_item_sprite = arcade.Sprite(self.item_battery, 0.1)
-        self.collect_item_sprite = BatteryItem()
 
         # Sprite lists ---------------------------------------------------------
         self.wall_list = None
@@ -297,10 +302,10 @@ class MazeKent(arcade.Window):
         # self.wall_list = arcade.SpriteList(use_spatial_hash=True)
         self.wall_list = arcade.SpriteList()
         self.floor_list = arcade.SpriteList()
-        # self.map_viewer_list = arcade.SpriteList()
         self.items_list = arcade.SpriteList()
         self.player_list = arcade.SpriteList()
         self.exit_list = arcade.SpriteList()
+        # self.map_viewer_list = arcade.SpriteList()
 
         # Create the maze
         maze = self.make_maze(self.maze_width, self.maze_height)
@@ -346,8 +351,6 @@ class MazeKent(arcade.Window):
         # Calculating the player's starting position from the `self.unused_coords_list()`
         player_coords_idx = self.unused_coords_list.index(max([i for i in self.unused_coords_list]))
         self.player_start_coords = self.unused_coords_list.pop(player_coords_idx)
-        # self.player_sprite.center_x = self.maze_width * self.sprite_size - 80
-        # self.player_sprite.center_y = self.maze_height * self.sprite_size - 75
         self.player_sprite.center_x = self.player_start_coords[0]
         self.player_sprite.center_y = self.player_start_coords[1]
 
@@ -366,7 +369,6 @@ class MazeKent(arcade.Window):
 
         # Setup Exit current level objet ---------------------------------------
         # Calculating the exit's starting position from the `self.unused_coords_list()`
-        # Set up the Exit level
         self.exit_sprite = ExitItem()
         self.exit_list.append(self.exit_sprite)
         exit_coords_idx = self.unused_coords_list.index(min([i for i in self.unused_coords_list]))
@@ -379,16 +381,11 @@ class MazeKent(arcade.Window):
         random.shuffle(self.unused_coords_list)
         random.shuffle(self.unused_coords_list)
 
-        # count_items = 3
+        # Generate Items
         if len(self.unused_coords_list) >= self.of_score:
             for item in range(self.of_score):
                 x, y = self.unused_coords_list.pop()
                 print(x, y)
-                # device = arcade.Sprite(self.item_battery, 0.12)  # 0.12
-                # device.center_x = x
-                # device.center_y = y
-                # self.items_list.append(device)
-
                 battery = BatteryItem()
                 battery.center_x = x
                 battery.center_y = y
@@ -408,6 +405,7 @@ class MazeKent(arcade.Window):
         print(f'Total floor blocks: {len(self.floor_list)}')
         print(f'Total blocks: {len(self.wall_list) + len(self.floor_list)}')
 
+        # GameOver flag
         self.game_over = False
 
     def on_draw(self):
@@ -427,19 +425,20 @@ class MazeKent(arcade.Window):
         # Call draw() on all your sprite lists below
         self.wall_list.draw()
         self.floor_list.draw()
-        # self.map_viewer_list.draw()
         self.items_list.draw()
         self.player_list.draw()
         self.exit_list.draw()
+        # self.map_viewer_list.draw()
 
         # Put the text on the screen.
-        self.collect_item_sprite.set_position(
+        # ItemBar
+        self.items_bar_battery.set_position(
             center_x=self.view_left + 20,
             center_y=self.screen_height - 20 + self.view_bottom,
         )
-        self.collect_item_sprite.draw()
+        self.items_bar_battery.draw()
+        # Score
         output = f'{self.score} / {self.of_score}'
-        # output = f'Score: {self.score} / {self.of_score}'
         arcade.draw_text(output,
                          self.view_left + 40,
                          self.screen_height - 32.5 + self.view_bottom,
@@ -467,6 +466,9 @@ class MazeKent(arcade.Window):
 
             # Update the players animation
             self.player_list.update_animation()
+
+            # Battery items animation
+            self.items_list.update_animation()
 
         # Update Item exit level animation depending on the number of scores
         if self.score < self.of_score:
