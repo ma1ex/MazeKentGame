@@ -263,7 +263,9 @@ class MazeKent(arcade.Window):
         self.exit_sprite = None
 
         # Items bar
+        self.items_bar = None
         self.items_bar_battery = BatteryItem(idle_only=True)
+
 
         # Debug player
         self.sprite_map_viewer = r'data/images/tiles/circle.png'
@@ -286,9 +288,10 @@ class MazeKent(arcade.Window):
         self.view_bottom = 0
         self.view_left = 0
 
-        # Background color
-        # arcade.set_background_color(arcade.color.AMAZON)
-        arcade.set_background_color((50, 50, 50))
+        # Background color and image
+        # arcade.set_background_color((50, 50, 50))
+        arcade.set_background_color((0, 0, 0))
+        self.background = None
 
         # Time to process
         self.processing_time = 0
@@ -297,6 +300,9 @@ class MazeKent(arcade.Window):
     def setup(self):
         """ Set up the game variables. Call to re-start the game. """
         # Create your sprites and sprite lists here
+
+        # Background image
+        self.background = arcade.load_texture(r'data/images/background/space.jpg')
 
         # Sprite lists init
         # self.wall_list = arcade.SpriteList(use_spatial_hash=True)
@@ -310,6 +316,12 @@ class MazeKent(arcade.Window):
         # Create the maze
         maze = self.make_maze(self.maze_width, self.maze_height)
         # [print(i) for i in maze]
+        # maze_coords = []
+        # for r in range(self.maze_height):
+        #     for c in range(self.maze_width):
+        #         maze_coords.append((c * self.sprite_size + self.sprite_size / 2,
+        #         r * self.sprite_size + self.sprite_size / 2))
+        # [print(i) for i in maze_coords]
 
         # Generate walls and floor
         for row in range(self.maze_height):
@@ -390,6 +402,8 @@ class MazeKent(arcade.Window):
                 battery.center_x = x
                 battery.center_y = y
                 self.items_list.append(battery)
+        else:
+            self.of_score = len(self.unused_coords_list) - 2
 
         # Setup physics engine -------------------------------------------------
         # self.physics_engine = arcade.PhysicsEngineSimple(self.map_viewer, arcade.SpriteList())
@@ -417,6 +431,25 @@ class MazeKent(arcade.Window):
         # the screen to the background color, and erase what we drew last frame.
         arcade.start_render()
 
+        # Draw the background texture
+        arcade.draw_lrwh_rectangle_textured(
+            self.view_left,
+            self.view_bottom,
+            self.screen_width,
+            self.screen_height,
+            self.background,
+            # alpha=180,
+        )
+
+        # arcade.draw_lrwh_rectangle_textured(
+        #     0,  # Left == X
+        #     -(self.sprite_size * self.maze_height - 100),  # Top position == Y
+        #     self.sprite_size * self.maze_width + 200,      # Width sprite
+        #     self.sprite_size * self.maze_height,           # Height sprite
+        #     self.maze_background,
+        #     # alpha=180,
+        # )
+
         # Start timing how long this takes
         draw_start_time = timeit.default_timer()
 
@@ -430,8 +463,17 @@ class MazeKent(arcade.Window):
         self.exit_list.draw()
         # self.map_viewer_list.draw()
 
-        # Put the text on the screen.
-        # ItemBar
+        # ItemBar panel #1
+        arcade.draw_rectangle_filled(
+            center_x=self.view_left + 48,
+            center_y=self.screen_height - 20 + self.view_bottom,
+            width=90,
+            height=33,
+            color=(0, 96, 96, 180)
+            # (250, 80, 0, 200)
+        )
+
+        # Collect items
         self.items_bar_battery.set_position(
             center_x=self.view_left + 20,
             center_y=self.screen_height - 20 + self.view_bottom,
