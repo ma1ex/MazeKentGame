@@ -45,6 +45,7 @@ class PlayerCharacter(arcade.Sprite):
         self.walk_down_textures = [arcade.load_texture(f'{main_path}_walk_down{i}.png') for i in range(9)]
         self.walk_left_textures = [arcade.load_texture(f'{main_path}_walk_left{i}.png') for i in range(9)]
         self.walk_right_textures = [arcade.load_texture(f'{main_path}_walk_right{i}.png') for i in range(9)]
+        self.teleport_textures = [arcade.load_texture(f'{main_path}_teleport{i}.png') for i in range(10)]
 
     def update_animation(self, delta_time: float = 1/60):
 
@@ -78,9 +79,6 @@ class PlayerCharacter(arcade.Sprite):
         elif self.change_y > 0:
             self.walk_character(self.walk_top_textures)
 
-        # else:
-        #     self.teleport_animation()
-
     def walk_character(self, texture_list: list) -> None:
         """
         Walking animation
@@ -90,22 +88,21 @@ class PlayerCharacter(arcade.Sprite):
         """
         self.cur_texture += 1
 
-        if self.cur_texture > 7 * self.updates_per_frame:
+        if self.cur_texture > 8 * self.updates_per_frame:
             self.cur_texture = 0
 
         frame = self.cur_texture // self.updates_per_frame
         self.texture = texture_list[frame]
 
-    # def teleport_animation(self):
-    #     # [self.scale -= 0.03 for _ in range(20)]
-    #     for _ in range(700):
-    #         if self.scale == 0.0:
-    #             break
-    #         else:
-    #             # self.scale -= 0.003 * self.updates_per_frame
-    #             self.scale -= 0.001
-    #
-    #     # self.kill()
+    def teleport(self):
+
+        self.cur_texture += 1
+
+        if self.cur_texture > 9 * self.updates_per_frame:
+            return
+
+        frame = self.cur_texture // self.updates_per_frame
+        self.texture = self.teleport_textures[frame]
 
 
 class ExitItem(arcade.Sprite):
@@ -265,7 +262,6 @@ class MazeKent(arcade.Window):
         # Items bar
         self.items_bar = None
         self.items_bar_battery = BatteryItem(idle_only=True)
-
 
         # Debug player
         self.sprite_map_viewer = r'data/images/tiles/circle.png'
@@ -522,7 +518,8 @@ class MazeKent(arcade.Window):
 
             for _ in exit_hit_list:
                 # self.player_sprite.teleport_animation()
-                self.player_sprite.kill()
+                self.player_sprite.teleport()
+                # self.player_sprite.kill()
                 self.game_over = True
 
         # Collisions with items
