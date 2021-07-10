@@ -3,6 +3,7 @@ MazeKent game
 """
 import timeit
 import arcade
+from arcade.gl import geometry
 import random
 from typing import (
     List
@@ -280,9 +281,17 @@ class MazeKent(arcade.Window):
         self.player_start_coords = None
         self.exit_start_coords = None
 
+        # Viewport -------------------------------------------------------------
+
         # Used to scroll
         self.view_bottom = 0
         self.view_left = 0
+
+        # Minimap
+        self.color_attachment = None
+        self.offscreen = None
+        self.quad_fs = None
+        self.mini_map_quad = None
 
         # Background color and image
         # arcade.set_background_color((50, 50, 50))
@@ -299,6 +308,22 @@ class MazeKent(arcade.Window):
 
         # Background image
         self.background = arcade.load_texture(r'data/images/background/space.jpg')
+
+        # Offscreen stuff ------------------------------------------------------
+        self.program = self.ctx.load_program(
+            vertex_shader=arcade.resources.shaders.vertex.default_projection,
+            fragment_shader=arcade.resources.shaders.fragment.texture)
+        self.color_attachment = self.ctx.texture((self.screen_width, self.screen_height), components=4)
+
+        # w = self.screen_width // self.maze_width
+        # h = self.screen_height // self.maze_height
+        # self.color_attachment = self.ctx.texture((int(w), int(h)), components=4)
+
+        self.offscreen = self.ctx.framebuffer(color_attachments=[self.color_attachment])
+        self.quad_fs = geometry.quad_2d_fs()
+        # self.mini_map_quad = geometry.quad_2d(size=(0.5, 0.5), pos=(0.75, 0.75))
+        self.mini_map_quad = geometry.quad_2d(size=(0.5, 0.5), pos=(0.80, 0.82))
+        # ----------------------------------------------------------------------
 
         # Sprite lists init
         # self.wall_list = arcade.SpriteList(use_spatial_hash=True)
@@ -427,27 +452,59 @@ class MazeKent(arcade.Window):
         # the screen to the background color, and erase what we drew last frame.
         arcade.start_render()
 
-        # Draw the background texture
-        arcade.draw_lrwh_rectangle_textured(
-            self.view_left,
-            self.view_bottom,
-            self.screen_width,
-            self.screen_height,
-            self.background,
-            # alpha=180,
-        )
+        self.offscreen.use()
+        self.offscreen.clear(arcade.color.AMAZON)
 
+        # self.view_left + 48,
+        # self.screen_height - 20 + self.view_bottom,
+        # self.screen_width / 2,
+        # self.screen_height / 2,
+        # arcade.draw_rectangle_outline(
+        #                               self.screen_width / 2,
+        #                               self.screen_height / 2,
+        #                               self.screen_width,
+        #                               self.screen_height,
+        #                               arcade.color.WHITE,
+        #                               0)
+
+        # self.coin_list.draw()
+        # self.player_list.draw()
+        # self.wall_list.draw()
+        # self.exit_list.draw()
+        # # ----------------------------------------------------------------------
+        # self.use()
+        #
+        # arcade.draw_rectangle_filled(self.screen_width / 2,
+        #                              self.screen_height / 2,
+        #                              self.screen_width,
+        #                              self.screen_height,
+        #                              arcade.color.AMAZON)
+        #
+        # self.color_attachment.use(0)
+        # self.quad_fs.render(self.program)
+        #
+        # arcade.draw_rectangle_filled(self.screen_width - self.screen_width / 8,
+        #                              self.screen_height - self.screen_height / 8,
+        #                              self.screen_width / 4,
+        #                              self.screen_height / 4,
+        #                              arcade.color.BLACK)
+        # self.color_attachment.use(0)
+        # self.mini_map_quad.render(self.program)
+        # # ----------------------------------------------------------------------
+
+        # Draw the background texture
         # arcade.draw_lrwh_rectangle_textured(
-        #     0,  # Left == X
-        #     -(self.sprite_size * self.maze_height - 100),  # Top position == Y
-        #     self.sprite_size * self.maze_width + 200,      # Width sprite
-        #     self.sprite_size * self.maze_height,           # Height sprite
-        #     self.maze_background,
+        #     self.view_left,
+        #     self.view_bottom,
+        #     self.screen_width,
+        #     self.screen_height,
+        #     self.background,
         #     # alpha=180,
         # )
 
-        # Start timing how long this takes
-        draw_start_time = timeit.default_timer()
+        # Start timing how long this takes -------------------------------------
+        # draw_start_time = timeit.default_timer()
+        # ----------------------------------------------------------------------
 
         # self.player_test = arcade.draw_circle_filled(self.p_x, self.p_y, 20, arcade.color.GOLD)
 
@@ -457,7 +514,34 @@ class MazeKent(arcade.Window):
         self.items_list.draw()
         self.player_list.draw()
         self.exit_list.draw()
+
         # self.map_viewer_list.draw()
+
+        # ----------------------------------------------------------------------
+        self.use()
+
+        # arcade.draw_rectangle_filled(self.screen_width / 2,
+        #                              self.screen_height / 2,
+        #                              self.screen_width,
+        #                              self.screen_height,
+        #                              arcade.color.AMAZON)
+
+        arcade.draw_lrwh_rectangle_textured(
+            self.view_left,
+            self.view_bottom,
+            self.screen_width,
+            self.screen_height,
+            self.background,
+            # alpha=180,
+        )
+
+        self.color_attachment.use(0)
+        self.quad_fs.render(self.program)
+
+        self.color_attachment.use(0)
+        self.mini_map_quad.render(self.program)
+
+        # ----------------------------------------------------------------------
 
         # ItemBar panel #1
         arcade.draw_rectangle_filled(
@@ -488,7 +572,7 @@ class MazeKent(arcade.Window):
             y = self.screen_height - (self.screen_height / 2) + self.view_bottom
             arcade.draw_text('Game Over', x, y, arcade.color.RED_DEVIL, 90, bold=True)
 
-        self.draw_time = timeit.default_timer() - draw_start_time
+        # self.draw_time = timeit.default_timer() - draw_start_time
 
     def on_update(self, delta_time):
         """
