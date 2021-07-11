@@ -202,6 +202,14 @@ class BatteryItem(arcade.Sprite):
         self.texture = self.idle_texture
 
 
+class MiniMap:
+    """
+    Minimap class based in Shape
+    """
+
+    pass
+
+
 class MazeKent(arcade.Window):
     """
     Main application class
@@ -288,6 +296,7 @@ class MazeKent(arcade.Window):
         self.view_left = 0
 
         # Minimap
+        self.program = None
         self.color_attachment = None
         self.offscreen = None
         self.quad_fs = None
@@ -314,10 +323,6 @@ class MazeKent(arcade.Window):
             vertex_shader=arcade.resources.shaders.vertex.default_projection,
             fragment_shader=arcade.resources.shaders.fragment.texture)
         self.color_attachment = self.ctx.texture((self.screen_width, self.screen_height), components=4)
-
-        # w = self.screen_width // self.maze_width
-        # h = self.screen_height // self.maze_height
-        # self.color_attachment = self.ctx.texture((int(w), int(h)), components=4)
 
         self.offscreen = self.ctx.framebuffer(color_attachments=[self.color_attachment])
         self.quad_fs = geometry.quad_2d_fs()
