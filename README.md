@@ -14,9 +14,10 @@
 Windows:
 
 ```cmd
-mkdir d:\MazeKent && cd /d d:\MazeKent
-python -m venv venv && venv\scripts\activate
+cd /d d:
 git clone https://github.com/ma1ex/MazeKentGame.git
+cd MazeKentGame
+python -m venv venv && venv\scripts\activate
 pip install -r requirements.txt
 ```
 
@@ -25,7 +26,7 @@ pip install -r requirements.txt
 Windows:
 
 ```cmd
-cd /d d:\MazeKent
+cd /d d:\MazeKentGame
 venv\scripts\activate
 python main.py
 ```
