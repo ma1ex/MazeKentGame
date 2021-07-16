@@ -597,6 +597,9 @@ class MazeKent(arcade.Window):
             # Battery items animation
             self.items_list.update_animation()
 
+            # for DEMO
+            # self.exit_list.update_animation()
+
         # Update Item exit level animation depending on the number of scores
         if self.score < self.of_score:
             self.exit_sprite.texture = self.exit_sprite.idle_texture

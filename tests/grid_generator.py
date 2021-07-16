@@ -28,8 +28,8 @@ def make_maze(maze_width: int, maze_height: int) -> list:
 
     maze = create_grid(maze_width, maze_height)
 
-    [print(g) for g in maze]
-    print()
+    # [print(g) for g in maze]
+    # print()
 
     empty = 0
     w = (len(maze[0]) - 1) // 2
