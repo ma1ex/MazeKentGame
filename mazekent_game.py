@@ -3,7 +3,6 @@ MazeKent game
 """
 import timeit
 import arcade
-from arcade.gl import geometry
 import random
 from typing import (
     List
@@ -215,7 +214,8 @@ class MazeKent(arcade.Window):
     Main application class
     """
 
-    def __init__(self, width, height, title):
+    def __init__(self, width: int, height: int, title: str, maze_width: int = 11,
+                 maze_height: int = 11):
         super().__init__(width, height, title)
 
         # Window size
@@ -232,13 +232,31 @@ class MazeKent(arcade.Window):
         self.tile_crate = 1
 
         # Maze default size
-        self.maze_width = 11
-        self.maze_height = 11
+        self.maze_width = maze_width
+        self.maze_height = maze_height
+        self.maze = None
 
         # Sprites config
         self.native_sprite_size = 32  # 128
         self.sprite_scaling = 1.7     # 0.40
         self.sprite_size = self.native_sprite_size * self.sprite_scaling
+
+        # Minimap size & position
+        self.minimap = None
+        self.minimap_sprates_list = []
+        self.minimap_native_sprite_size = 1  # 1  # 4
+        self.minimap_sprite_scaling = 7      # 7  # 1.5
+        self.minimap_sprite_size = self.minimap_native_sprite_size * self.minimap_sprite_scaling
+        self.minimap_width = self.minimap_sprite_size * self.maze_width
+        self.minimap_height = self.minimap_sprite_size * self.maze_height
+        self.minimap_x = self.screen_width - self.minimap_width / 2 - 5
+        self.minimap_y = self.minimap_height / 2 + 5
+        self.show_minimap = False
+        print(f'{self.minimap_sprite_size = }')
+        print(f'{self.minimap_width = }')
+        print(f'{self.minimap_height = }')
+        print(f'{self.minimap_x = }')
+        print(f'{self.minimap_y = }')
 
         # Sprites --------------------------------------------------------------
 
@@ -264,6 +282,7 @@ class MazeKent(arcade.Window):
         self.player_sprite = None
 
         # Items
+        self.items_coords_list = []
 
         # Exit level
         self.exit_sprite = None
@@ -271,6 +290,11 @@ class MazeKent(arcade.Window):
         # Items bar
         self.items_bar = None
         self.items_bar_battery = BatteryItem(idle_only=True)
+
+        # Static minimap
+        self.minimap_sprite = r'data/images/tiles/teal_square.png'
+        # self.minimap_sprite = r'.ignored/red_square.png'
+        self.minimap_exit_sprite = arcade.Sprite(r'data/images/tiles/lime_square.png', scale=4)
 
         # Debug player
         self.sprite_map_viewer = r'data/images/tiles/circle.png'
@@ -283,6 +307,7 @@ class MazeKent(arcade.Window):
         self.player_list = None
         self.items_list = None
         self.exit_list = None
+        self.minimap_list = None
 
         # Available floor coords - for place game objects
         self.unused_coords_list = []
@@ -303,7 +328,6 @@ class MazeKent(arcade.Window):
         self.mini_map_quad = None
 
         # Background color and image
-        # arcade.set_background_color((50, 50, 50))
         arcade.set_background_color((0, 0, 0))
         self.background = None
 
@@ -318,29 +342,16 @@ class MazeKent(arcade.Window):
         # Background image
         self.background = arcade.load_texture(r'data/images/background/space.jpg')
 
-        # Offscreen stuff ------------------------------------------------------
-        self.program = self.ctx.load_program(
-            vertex_shader=arcade.resources.shaders.vertex.default_projection,
-            fragment_shader=arcade.resources.shaders.fragment.texture)
-        self.color_attachment = self.ctx.texture((self.screen_width, self.screen_height), components=4)
-
-        self.offscreen = self.ctx.framebuffer(color_attachments=[self.color_attachment])
-        self.quad_fs = geometry.quad_2d_fs()
-        # self.mini_map_quad = geometry.quad_2d(size=(0.5, 0.5), pos=(0.75, 0.75))
-        self.mini_map_quad = geometry.quad_2d(size=(0.5, 0.5), pos=(0.80, 0.82))
-        # ----------------------------------------------------------------------
-
         # Sprite lists init
-        # self.wall_list = arcade.SpriteList(use_spatial_hash=True)
-        self.wall_list = arcade.SpriteList()
-        self.floor_list = arcade.SpriteList()
+        self.wall_list = arcade.SpriteList(is_static=True)
+        self.floor_list = arcade.SpriteList(is_static=True)
         self.items_list = arcade.SpriteList()
         self.player_list = arcade.SpriteList()
         self.exit_list = arcade.SpriteList()
-        # self.map_viewer_list = arcade.SpriteList()
+        self.minimap_list = arcade.SpriteList(is_static=True)
 
         # Create the maze
-        maze = self.make_maze(self.maze_width, self.maze_height)
+        self.maze = self.make_maze(self.maze_width, self.maze_height)
         # [print(i) for i in maze]
         # maze_coords = []
         # for r in range(self.maze_height):
@@ -352,11 +363,12 @@ class MazeKent(arcade.Window):
         # Generate walls and floor
         for row in range(self.maze_height):
             for column in range(self.maze_width):
-                if maze[row][column] == 1:
+                if self.maze[row][column] == 1:
                     wall = arcade.Sprite(random.choice(self.sprite_wall_list), self.sprite_scaling)
                     wall.center_x = column * self.sprite_size + self.sprite_size / 2
                     wall.center_y = row * self.sprite_size + self.sprite_size / 2
                     self.wall_list.append(wall)
+
                 else:
                     # Add unused coords for place mics items
                     self.unused_coords_list.append((
@@ -373,14 +385,6 @@ class MazeKent(arcade.Window):
         # print()
         # [print(i) for i in self.unused_coords_list]
 
-        # Set up the map_viewer ------------------------------------------------
-        # self.map_viewer = arcade.Sprite(self.sprite_map_viewer)
-        # self.map_viewer_list.append(self.map_viewer)
-        #
-        # # Set map_viewer position
-        # self.map_viewer.center_x = 0
-        # self.map_viewer.center_y = 0
-
         # Set up the player ----------------------------------------------------
         self.player_sprite = PlayerCharacter()
         self.player_list.append(self.player_sprite)
@@ -391,19 +395,6 @@ class MazeKent(arcade.Window):
         self.player_start_coords = self.unused_coords_list.pop(player_coords_idx)
         self.player_sprite.center_x = self.player_start_coords[0]
         self.player_sprite.center_y = self.player_start_coords[1]
-
-        # Checking for collision with a wall at the starting position
-        # placed = False
-        # while not placed:
-        #
-        #     # Are we in a wall?
-        #     walls_hit = arcade.check_for_collision_with_list(self.player_sprite, self.wall_list)
-        #     if len(walls_hit) == 0:
-        #         # Not in a wall! Success!
-        #         placed = True
-        #     else:
-        #         self.player_sprite.center_x -= 1
-        #         self.player_sprite.center_y -= 1
 
         # Setup Exit current level objet ---------------------------------------
         # Calculating the exit's starting position from the `self.unused_coords_list()`
@@ -457,80 +448,11 @@ class MazeKent(arcade.Window):
         # the screen to the background color, and erase what we drew last frame.
         arcade.start_render()
 
-        self.offscreen.use()
-        self.offscreen.clear(arcade.color.AMAZON)
-
-        # self.view_left + 48,
-        # self.screen_height - 20 + self.view_bottom,
-        # self.screen_width / 2,
-        # self.screen_height / 2,
-        # arcade.draw_rectangle_outline(
-        #                               self.screen_width / 2,
-        #                               self.screen_height / 2,
-        #                               self.screen_width,
-        #                               self.screen_height,
-        #                               arcade.color.WHITE,
-        #                               0)
-
-        # self.coin_list.draw()
-        # self.player_list.draw()
-        # self.wall_list.draw()
-        # self.exit_list.draw()
-        # # ----------------------------------------------------------------------
-        # self.use()
-        #
-        # arcade.draw_rectangle_filled(self.screen_width / 2,
-        #                              self.screen_height / 2,
-        #                              self.screen_width,
-        #                              self.screen_height,
-        #                              arcade.color.AMAZON)
-        #
-        # self.color_attachment.use(0)
-        # self.quad_fs.render(self.program)
-        #
-        # arcade.draw_rectangle_filled(self.screen_width - self.screen_width / 8,
-        #                              self.screen_height - self.screen_height / 8,
-        #                              self.screen_width / 4,
-        #                              self.screen_height / 4,
-        #                              arcade.color.BLACK)
-        # self.color_attachment.use(0)
-        # self.mini_map_quad.render(self.program)
-        # # ----------------------------------------------------------------------
-
-        # Draw the background texture
-        # arcade.draw_lrwh_rectangle_textured(
-        #     self.view_left,
-        #     self.view_bottom,
-        #     self.screen_width,
-        #     self.screen_height,
-        #     self.background,
-        #     # alpha=180,
-        # )
-
         # Start timing how long this takes -------------------------------------
         # draw_start_time = timeit.default_timer()
         # ----------------------------------------------------------------------
 
-        # self.player_test = arcade.draw_circle_filled(self.p_x, self.p_y, 20, arcade.color.GOLD)
-
-        # Call draw() on all your sprite lists below
-        self.wall_list.draw()
-        self.floor_list.draw()
-        self.items_list.draw()
-        self.player_list.draw()
-        self.exit_list.draw()
-
-        # self.map_viewer_list.draw()
-
-        # ----------------------------------------------------------------------
-        self.use()
-
-        # arcade.draw_rectangle_filled(self.screen_width / 2,
-        #                              self.screen_height / 2,
-        #                              self.screen_width,
-        #                              self.screen_height,
-        #                              arcade.color.AMAZON)
-
+        # Wallpaper
         arcade.draw_lrwh_rectangle_textured(
             self.view_left,
             self.view_bottom,
@@ -540,13 +462,16 @@ class MazeKent(arcade.Window):
             # alpha=180,
         )
 
-        self.color_attachment.use(0)
-        self.quad_fs.render(self.program)
+        # Draw game items
+        self.wall_list.draw()
+        self.floor_list.draw()
+        self.items_list.draw()
+        self.player_list.draw()
+        self.exit_list.draw()
 
-        self.color_attachment.use(0)
-        self.mini_map_quad.render(self.program)
-
-        # ----------------------------------------------------------------------
+        # Show minimap
+        if self.show_minimap:
+            self.generate_minimap()
 
         # ItemBar panel #1
         arcade.draw_rectangle_filled(
@@ -609,7 +534,6 @@ class MazeKent(arcade.Window):
                 self.player_sprite, self.exit_list)
 
             for _ in exit_hit_list:
-                # self.player_sprite.teleport_animation()
                 self.player_sprite.teleport()
                 # self.player_sprite.kill()
                 self.game_over = True
@@ -627,36 +551,6 @@ class MazeKent(arcade.Window):
         # Track if we need to change the viewport
 
         changed = False
-
-        # # Scroll left
-        # left_bndry = self.view_left + 200
-        # if self.map_viewer.left < left_bndry:
-        #     self.view_left -= left_bndry - self.map_viewer.left
-        #     changed = True
-        #
-        # # Scroll right
-        # right_bndry = self.view_left + self.screen_width - 200
-        # if self.map_viewer.right > right_bndry:
-        #     self.view_left += self.map_viewer.right - right_bndry
-        #     changed = True
-        #
-        # # Scroll up
-        # top_bndry = self.view_bottom + self.screen_height - 200
-        # if self.map_viewer.top > top_bndry:
-        #     self.view_bottom += self.map_viewer.top - top_bndry
-        #     changed = True
-        #
-        # # Scroll down
-        # bottom_bndry = self.view_bottom + 200
-        # if self.map_viewer.bottom < bottom_bndry:
-        #     self.view_bottom -= bottom_bndry - self.map_viewer.bottom
-        #     changed = True
-        #
-        # if changed:
-        #     arcade.set_viewport(self.view_left,
-        #                         self.screen_width + self.view_left,
-        #                         self.view_bottom,
-        #                         self.screen_height + self.view_bottom)
 
         # Scroll left
         left_bndry = self.view_left + 200
@@ -728,7 +622,8 @@ class MazeKent(arcade.Window):
 
         # "M" key for view full map
         elif key == arcade.key.M:
-            self.show_full_map()
+            # self.show_full_map()
+            self.show_minimap = True
 
     def on_key_release(self, key, key_modifiers):
         """
@@ -751,12 +646,16 @@ class MazeKent(arcade.Window):
         #     self.map_viewer.change_x = 0
 
         elif key == arcade.key.M:
-            self.show_full_map(release=True)
+            # self.show_full_map(release=True)
+            self.show_minimap = False
 
     def on_mouse_motion(self, x, y, delta_x, delta_y):
         """
         Called whenever the mouse moves.
         """
+
+        # print(f'{x=} {y=}')
+
         pass
 
     def on_mouse_press(self, x, y, button, key_modifiers):
@@ -905,3 +804,65 @@ class MazeKent(arcade.Window):
         print(f'{ratio = }')
 
         return ratio
+
+    def generate_minimap(self) -> None:
+        """
+        Generating a static minimap and other game items using a one-pixel sprite
+
+        :return: None
+        """
+
+        # Check list
+        if self.minimap_list:
+            self.minimap_list = arcade.SpriteList()
+
+        # List unused coordinates in minimap
+        unused_coords = []
+
+        # Generating a minimap using a one-pixel sprite
+        for row in range(self.maze_height):
+            for column in range(self.maze_width):
+                # Walls
+                if self.maze[row][column] == 1:
+                    self.minimap = arcade.Sprite(self.minimap_sprite, self.minimap_sprite_scaling)
+
+                    x = column * self.minimap_sprite_size + self.minimap_sprite_size / 2
+                    y = row * self.minimap_sprite_size + self.minimap_sprite_size / 2
+
+                    # Set the position based on the current camera position
+                    self.minimap.center_x = x + self.view_left + (self.screen_width - self.minimap_width) - 5
+                    self.minimap.center_y = y + self.view_bottom + 5
+                    self.minimap_list.append(self.minimap)
+
+                # Empty (floor) coords
+                else:
+                    unused_coords.append((
+                        (column * self.minimap_sprite_size + self.minimap_sprite_size / 2) +
+                        self.view_left + (self.screen_width - self.minimap_width) - 5,
+
+                        (row * self.minimap_sprite_size + self.minimap_sprite_size / 2 + self.view_bottom + 5)
+                    ))
+
+        # Mark exit
+        minimap_exit_coords_idx = unused_coords.index(min([i for i in unused_coords]))
+        minimap_exit_start_coords = unused_coords.pop(minimap_exit_coords_idx)
+        # print(f'{minimap_exit_start_coords =}')
+
+        self.minimap_exit_sprite.set_position(
+            center_x=minimap_exit_start_coords[0],
+            center_y=minimap_exit_start_coords[1],
+        )
+
+        # Draw minimap background
+        arcade.draw_rectangle_filled(
+            width=self.minimap_width,
+            height=self.minimap_height,
+            center_x=self.minimap_x + self.view_left,    # 220,
+            center_y=self.minimap_y + self.view_bottom,  # 430,
+            # color=(0, 250, 0, 255),
+            color=(0, 0, 0, 180),
+        )
+
+        # Draw minimap
+        self.minimap_list.draw()
+        self.minimap_exit_sprite.draw()

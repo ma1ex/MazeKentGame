@@ -60,7 +60,7 @@ class MyGame(arcade.Window):
                     # x = self.minimap_x / 2 + (column * self.sprite_size + self.sprite_size / 2)
                     x = self.minimap_x + (self.minimap_width / 2) - (column * self.sprite_size + self.sprite_size / 2)
                     y = self.minimap_y * 2 - (row * self.sprite_size + self.sprite_size / 2) - 5
-                    print(f'{x = } / {y = }')
+                    # print(f'{x = } / {y = }')
                     self.wall_lines_list.append((x, y),)
                     wall.center_x = x
                     wall.center_y = y
@@ -81,6 +81,7 @@ class MyGame(arcade.Window):
         # print()
         # [print(i) for i in maze]
         # [print(i) for i in self.wall_lines_list]
+        # [print(i, i.set_position(i.position[0] - idx, i.position[1] - idx)) for idx, i in enumerate(self.wall_list)]
 
         pass
 
