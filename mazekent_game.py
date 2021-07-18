@@ -201,14 +201,6 @@ class BatteryItem(arcade.Sprite):
         self.texture = self.idle_texture
 
 
-class MiniMap:
-    """
-    Minimap class based in Shape
-    """
-
-    pass
-
-
 class MazeKent(arcade.Window):
     """
     Main application class
@@ -283,6 +275,7 @@ class MazeKent(arcade.Window):
 
         # Items
         self.items_coords_list = []
+        self.battery_coords_list = []
 
         # Exit level
         self.exit_sprite = None
@@ -402,6 +395,7 @@ class MazeKent(arcade.Window):
         self.exit_list.append(self.exit_sprite)
         exit_coords_idx = self.unused_coords_list.index(min([i for i in self.unused_coords_list]))
         self.exit_start_coords = self.unused_coords_list.pop(exit_coords_idx)
+        print(f'{self.exit_start_coords = }')
 
         self.exit_sprite.center_x = self.exit_start_coords[0]
         self.exit_sprite.center_y = self.exit_start_coords[1]
@@ -414,13 +408,17 @@ class MazeKent(arcade.Window):
         if len(self.unused_coords_list) >= self.of_score:
             for item in range(self.of_score):
                 x, y = self.unused_coords_list.pop()
-                print(x, y)
+                # print(f'Battery coords: {x=}, {y=}')
                 battery = BatteryItem()
                 battery.center_x = x
                 battery.center_y = y
                 self.items_list.append(battery)
+
+                # Battery coords for use in minimap
+                self.battery_coords_list.append((x, y))
         else:
             self.of_score = len(self.unused_coords_list) - 2
+        print(f'{self.battery_coords_list = }')
 
         # Setup physics engine -------------------------------------------------
         # self.physics_engine = arcade.PhysicsEngineSimple(self.map_viewer, arcade.SpriteList())
@@ -501,6 +499,9 @@ class MazeKent(arcade.Window):
             x = self.view_left + (self.screen_width / 2) - 200
             y = self.screen_height - (self.screen_height / 2) + self.view_bottom
             arcade.draw_text('Game Over', x, y, arcade.color.RED_DEVIL, 90, bold=True)
+
+        print(f'{self.view_left = }')
+        print(f'{self.view_bottom = }')
 
         # self.draw_time = timeit.default_timer() - draw_start_time
 
@@ -648,6 +649,7 @@ class MazeKent(arcade.Window):
         elif key == arcade.key.M:
             # self.show_full_map(release=True)
             self.show_minimap = False
+            self.minimap_list = None
 
     def on_mouse_motion(self, x, y, delta_x, delta_y):
         """
@@ -813,8 +815,7 @@ class MazeKent(arcade.Window):
         """
 
         # Check list
-        if self.minimap_list:
-            self.minimap_list = arcade.SpriteList()
+        self.minimap_list = arcade.SpriteList()
 
         # List unused coordinates in minimap
         unused_coords = []
@@ -846,7 +847,7 @@ class MazeKent(arcade.Window):
         # Mark exit
         minimap_exit_coords_idx = unused_coords.index(min([i for i in unused_coords]))
         minimap_exit_start_coords = unused_coords.pop(minimap_exit_coords_idx)
-        # print(f'{minimap_exit_start_coords =}')
+        # print(f'{minimap_exit_start_coords = }')
 
         self.minimap_exit_sprite.set_position(
             center_x=minimap_exit_start_coords[0],
