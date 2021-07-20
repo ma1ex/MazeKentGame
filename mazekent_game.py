@@ -288,6 +288,8 @@ class MazeKent(arcade.Window):
         self.minimap_sprite = r'data/images/tiles/teal_square.png'
         # self.minimap_sprite = r'.ignored/red_square.png'
         self.minimap_exit_sprite = arcade.Sprite(r'data/images/tiles/lime_square.png', scale=4)
+        self.minimap_item_sprite = arcade.Sprite(r'.ignored/yellow_square.png', scale=4)
+        self.minimap_items_list = None
 
         # Debug player
         self.sprite_map_viewer = r'data/images/tiles/circle.png'
@@ -342,6 +344,7 @@ class MazeKent(arcade.Window):
         self.player_list = arcade.SpriteList()
         self.exit_list = arcade.SpriteList()
         self.minimap_list = arcade.SpriteList(is_static=True)
+        self.minimap_items_list = arcade.SpriteList(is_static=True)
 
         # Create the maze
         self.maze = self.make_maze(self.maze_width, self.maze_height)
@@ -500,8 +503,8 @@ class MazeKent(arcade.Window):
             y = self.screen_height - (self.screen_height / 2) + self.view_bottom
             arcade.draw_text('Game Over', x, y, arcade.color.RED_DEVIL, 90, bold=True)
 
-        print(f'{self.view_left = }')
-        print(f'{self.view_bottom = }')
+        # print(f'{self.view_left = }')
+        # print(f'{self.view_bottom = }')
 
         # self.draw_time = timeit.default_timer() - draw_start_time
 
@@ -656,7 +659,7 @@ class MazeKent(arcade.Window):
         Called whenever the mouse moves.
         """
 
-        # print(f'{x=} {y=}')
+        print(f'{x=} {y=}')
 
         pass
 
@@ -818,7 +821,7 @@ class MazeKent(arcade.Window):
         self.minimap_list = arcade.SpriteList()
 
         # List unused coordinates in minimap
-        unused_coords = []
+        # unused_coords = []
 
         # Generating a minimap using a one-pixel sprite
         for row in range(self.maze_height):
@@ -836,23 +839,41 @@ class MazeKent(arcade.Window):
                     self.minimap_list.append(self.minimap)
 
                 # Empty (floor) coords
-                else:
-                    unused_coords.append((
-                        (column * self.minimap_sprite_size + self.minimap_sprite_size / 2) +
-                        self.view_left + (self.screen_width - self.minimap_width) - 5,
-
-                        (row * self.minimap_sprite_size + self.minimap_sprite_size / 2 + self.view_bottom + 5)
-                    ))
+                # else:
+                #     unused_coords.append((
+                #         (column * self.minimap_sprite_size + self.minimap_sprite_size / 2) +
+                #         self.view_left + (self.screen_width - self.minimap_width) - 5,
+                #
+                #         (row * self.minimap_sprite_size + self.minimap_sprite_size / 2 + self.view_bottom + 5)
+                #     ))
 
         # Mark exit
-        minimap_exit_coords_idx = unused_coords.index(min([i for i in unused_coords]))
-        minimap_exit_start_coords = unused_coords.pop(minimap_exit_coords_idx)
+        # minimap_exit_coords_idx = unused_coords.index(min([i for i in unused_coords]))
+        # minimap_exit_start_coords = unused_coords.pop(minimap_exit_coords_idx)
         # print(f'{minimap_exit_start_coords = }')
+        # self.minimap_exit_sprite.set_position(
+        #     center_x=minimap_exit_start_coords[0],
+        #     center_y=minimap_exit_start_coords[1],
+        # )
+
+
+        minimap_exit_x = (self.minimap_sprite_size + self.minimap_sprite_size / 2) + self.view_left + (self.screen_width - self.maze_width) - 5 - self.exit_start_coords[0] + self.minimap_width - self.minimap_sprite_size - self.sprite_size
+        minimap_exit_y = (self.minimap_sprite_size + self.minimap_sprite_size / 2) + self.view_bottom + 5
+        # print(f'{minimap_exit_x = }')
+        # print(f'{minimap_exit_y = }')
 
         self.minimap_exit_sprite.set_position(
-            center_x=minimap_exit_start_coords[0],
-            center_y=minimap_exit_start_coords[1],
+            center_x=minimap_exit_x,
+            center_y=minimap_exit_y,
         )
+
+        # Generate Items
+        for item in self.battery_coords_list:
+            x, y = item
+            battery = self.minimap_item_sprite
+            battery.center_x = (self.minimap_sprite_size + self.minimap_sprite_size / 2) + self.view_left + (self.screen_width - self.maze_width) - 5 - x + (self.maze_width * self.minimap_sprite_size) - self.minimap_sprite_size - self.sprite_size
+            battery.center_y = (self.minimap_sprite_size + self.minimap_sprite_size / 2) + self.view_bottom + 5
+            self.minimap_items_list.append(battery)
 
         # Draw minimap background
         arcade.draw_rectangle_filled(
@@ -867,3 +888,4 @@ class MazeKent(arcade.Window):
         # Draw minimap
         self.minimap_list.draw()
         self.minimap_exit_sprite.draw()
+        self.minimap_items_list.draw()
